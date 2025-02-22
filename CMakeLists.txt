@@ -35,7 +35,7 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(bitdog-locker bitdog-locker.c )
+add_executable(bitdog-locker bitdog-locker.c inc/ssd1306_i2c.c)
 
 pico_set_program_name(bitdog-locker "bitdog-locker")
 pico_set_program_version(bitdog-locker "0.1")
@@ -57,6 +57,7 @@ target_include_directories(bitdog-locker PRIVATE
 target_link_libraries(bitdog-locker 
         hardware_adc
         hardware_pwm
+        hardware_i2c
         )
 
 pico_add_extra_outputs(bitdog-locker)
