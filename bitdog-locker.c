@@ -10,11 +10,16 @@
 #define ADC_CHANNEL_0 0
 #define ADC_CHANNEL_1 1
 #define SW 22
+#define SERVO_CTL 28
+#define PWM_DIVIDER 250.0f
+#define PERIOD 10000
 #define PASS_LENGTH 4
+
 
 char numbers[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
 uint8_t password_att[PASS_LENGTH];
 uint16_t vry_num=0;
+
 
 void setup_joystick()
 {
@@ -32,6 +37,16 @@ void setup_gpio()
     gpio_set_dir(BTN_B, GPIO_IN);
     gpio_pull_up(BTN_B);
 }
+
+void setup_pwm()
+{
+    uint slice;
+    gpio_set_function(SERVO_CTL, GPIO_FUNC_PWM);
+    slice = pwm_gpio_to_slice_num(SERVO_CTL);
+    pwm_set_clkdiv(slice, PWM_DIVIDER);
+    pwm_set_wrap(slice, PERIOD);
+    pwm_set_enabled(slice, false);
+}
 void setup_pass()
 {
     for(uint8_t i = 0; i<PASS_LENGTH; i++){
@@ -45,6 +60,7 @@ void setup()
     setup_joystick();
     setup_gpio();
     setup_pass();
+    setup_pwm();
 }
 
 void read_joystick_value()
@@ -117,17 +133,25 @@ bool check_password(uint8_t password[], uint8_t* curr_pos, bool *locker_opened)
         }
     }
     printf("Correct password!\n");
-    *locker_opened = true;
     return 0;
 }
 
-void open_lock(){
-    //TODO: pwd funcntion to activate servo
-    printf("Opening locker\n");
+void open_lock(bool *locker_opened){
+    uint slice = pwm_gpio_to_slice_num(SERVO_CTL);
+    pwm_set_gpio_level(SERVO_CTL, 220); //[220,1100]
+    pwm_set_enabled(slice, true);
+    sleep_ms(1000);
+    pwm_set_enabled(slice,false);
+    printf("Opening locker...\n");
+    *locker_opened = true;
 }
 void close_lock(bool *locker_opened){
-    //TODO: pwd funcntion to activate servo
-    printf("Closing locker");
+    uint slice = pwm_gpio_to_slice_num(SERVO_CTL);
+    pwm_set_gpio_level(SERVO_CTL, 1100); //[220,1100]
+    pwm_set_enabled(slice, true);
+    sleep_ms(1000);
+    pwm_set_enabled(slice,false);
+    printf("Closing locker...");
     *locker_opened = false;
 }
 
@@ -135,7 +159,7 @@ int main()
 {
     uint8_t position = 0;
     uint8_t curr_position = 0;
-    uint8_t password[PASS_LENGTH] = {0,0,0,0}; //TODO: rotina de nova senha;
+    uint8_t password[PASS_LENGTH] = {0,0,0,0};
     bool pass_complete, correct_pass;
     bool locker_opened = false;
     bool change_pass = false;
@@ -144,7 +168,7 @@ int main()
     sleep_ms(5000);
     printf("Locker Begin!\n");
 
-    while (true) {
+    while (false) {
         if (locker_opened == true && change_pass == false) {
             if(gpio_get(BTN_A) == 0 ){
                 change_pass = true;
@@ -164,7 +188,7 @@ int main()
                 correct_pass = check_password(password, &curr_position, &locker_opened);
                 if(correct_pass == 0){
                     correct_pass = 1; // 
-                    open_lock();
+                    open_lock(&locker_opened);
                 }
             } 
         } else if(gpio_get(BTN_A) == 0){
@@ -173,6 +197,10 @@ int main()
         read_joystick_value();
         number_selector(&position);
 
-        sleep_ms(1000);
+        sleep_ms(500);
     }
+
+
+
+
 }
